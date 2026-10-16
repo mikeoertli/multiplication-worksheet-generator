@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multiplication Worksheet Generator</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef2f4;color:#172b36;font-family:Arial,Helvetica,sans-serif}.controls{max-width:900px;margin:32px auto 24px;padding:0 24px}.eyebrow{font-size:12px;font-weight:bold;letter-spacing:2px;color:#447367}h1{font-size:28px;margin:10px 0}p{line-height:1.5}.toolbar{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:22px 0 10px}label{font-size:14px;font-weight:bold;display:block}input{display:block;width:130px;margin-top:8px;border:1px solid #8799a2;border-radius:7px;padding:11px;font-size:17px}button{border:1px solid #a5b4bb;background:white;color:#172b36;padding:13px 17px;border-radius:7px;font-size:14px;font-weight:bold;cursor:pointer}button.primary{background:#215e50;border-color:#215e50;color:white}button:hover{filter:brightness(.94)}button:focus-visible,input:focus-visible{outline:3px solid #49a18c;outline-offset:3px}.hint,#status{font-size:13px;color:#48616e}#status{min-height:20px}#error{color:#a52020;font-size:14px;min-height:18px}.paper{width:8.5in;height:11in;padding:.6in;margin:20px auto 40px;background:white;color:#111;box-shadow:0 4px 24px #163b4517;overflow:hidden}.sheet-title{font-size:22pt;font-weight:bold;margin:0 0 12pt}.details{display:flex;justify-content:space-between;font-size:11pt;margin-bottom:12pt}.instructions{font-size:11pt;margin:0 0 20pt}.problems{display:grid;grid-template-columns:1fr 1fr;column-gap:34pt}.column{display:flex;flex-direction:column;gap:0}.problem{height:42pt;display:flex;align-items:center;font-size:22pt;white-space:nowrap}.equation{width:139pt;text-align:right;padding-right:9pt}.answer{display:inline-block;flex:1;border-bottom:1px solid #333;height:25pt;min-width:40pt}
+@media screen and (max-width:850px){.paper{width:calc(100% - 24px);height:auto;min-height:750px;padding:28px}.problem{font-size:clamp(14px,3vw,27px);height:42px}.equation{width:auto;padding-right:8px}.problems{column-gap:20px}.sheet-title{font-size:24px}.details{gap:20px;font-size:12px}}
+@page{size:letter portrait;margin:0}
+@media print{html,body{margin:0;padding:0;background:white}.controls{display:none}.paper{margin:0;box-shadow:none;width:8.5in;height:10.99in;break-inside:avoid;page-break-inside:avoid}}
+</style>
+</head>
+<body>
+<main>
+<section class="controls" aria-label="Worksheet settings">
+<div class="eyebrow">MULTIPLICATION PRACTICE</div>
+<h1>A fresh worksheet, every time.</h1>
+<p>Choose a number, shuffle the 25 problems, then download or print one US Letter page.</p>
+<form id="settings" class="toolbar" novalidate>
+<label for="focal">Number to practice<input id="focal" name="focal" type="number" min="0" max="999" step="1" value="5" required aria-describedby="error"></label>
+<button type="submit" class="primary" id="generate">Shuffle &amp; Generate</button>
+<button type="button" id="download">Download PDF</button>
+<button type="button" id="print">Print</button>
+</form>
+<div id="error" role="alert"></div>
+<div id="status" role="status" aria-live="polite"></div>
+<p class="hint">Exact photo pattern: multipliers 0–12 appear twice, except 5 once. Each problem keeps its original multiplication order. Works offline after saving this file.</p>
+<p class="hint">Open the saved HTML in Safari, Chrome, Edge, or Firefox to use the buttons.</p>
+<noscript><p>JavaScript must be enabled to generate, download, and print worksheets. Open this file in a browser instead of a file preview.</p></noscript>
+</section>
+<section class="paper" aria-label="Printable worksheet">
+<h2 class="sheet-title" id="sheet-title">Multiplication Practice: 5</h2>
+<div class="details"><span>Name: ________________________</span><span>Date: ________________</span></div>
+<p class="instructions">Solve each multiplication problem.</p>
+<div class="problems" id="problems"></div>
+</section>
+</main>
+<script>
+'use strict';
+// null marks the focal number. These are the exact oriented pairs in the photo,
+// read down its left column, then down its right column.
+const PHOTO_PATTERN = [
+ [0,null],[11,null],[null,3],[1,null],[7,null],[null,5],
+ [null,2],[10,null],[null,4],[6,null],[8,null],[null,9],[12,null],
+ [9,null],[null,10],[null,1],[4,null],[null,0],[null,11],
+ [2,null],[null,7],[null,12],[null,8],[3,null],[null,6]
+];
+const focalInput = document.getElementById('focal');
+const errorBox = document.getElementById('error');
+const statusBox = document.getElementById('status');
+let currentNumber = 5;
+let currentOrder = [];
+let generation = 0;
+function readNumber() {
+ const value = focalInput.value.trim();
+ const number = Number(value);
+ if (!value || !Number.isSafeInteger(number) || number < 0 || number > 999) {
+  errorBox.textContent = 'Enter a whole number from 0 to 999.';
+  focalInput.setAttribute('aria-invalid','true');
+  focalInput.focus();
+  return null;
+ }
+ errorBox.textContent = '';
+ focalInput.removeAttribute('aria-invalid');
+ return number;
+}
+function pairs() {
+ return currentOrder.map(index => PHOTO_PATTERN[index].map(value => value === null ? currentNumber : value));
+}
+function render() {
+ document.getElementById('sheet-title').textContent = `Multiplication Practice: ${currentNumber}`;
+ const container = document.getElementById('problems');
+ container.replaceChildren();
+ const problems = pairs();
+ for (const columnPairs of [problems.slice(0,13),problems.slice(13)]) {
+  const column = document.createElement('div'); column.className='column';
+  for (const [a,b] of columnPairs) {
+   const row=document.createElement('div'); row.className='problem';
+   const equation=document.createElement('span'); equation.className='equation';
+   equation.textContent=`${a} × ${b} =`;
+   const answer=document.createElement('span'); answer.className='answer';
+   row.append(equation,answer); column.append(row);
+  }
+  container.append(column);
+ }
+}
+function generate() {
+ const number=readNumber(); if(number===null) return false;
+ const next=PHOTO_PATTERN.map((_,i)=>i);
+ for(let i=next.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[next[i],next[j]]=[next[j],next[i]];}
+ // Even an unlucky shuffle must change the displayed order.
+ if(next.every((value,i)=>value===currentOrder[i])) next.push(next.shift());
+ currentOrder=next; currentNumber=number; generation++;
+ render(); statusBox.textContent=`Worksheet ${generation} ready: 25 problems practicing ${number}.`;
+ return true;
+}
+function ensureCurrent() {
+ const number=readNumber(); if(number===null) return false;
+ return number===currentNumber || generate();
+}
+function pdfEscape(value){return String(value).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');}
+function buildPDF() {
+ // A small, standards-based PDF writer keeps this app completely offline.
+ // All bytes are ASCII; the multiplication glyph is WinAnsi octal 327.
+ const commands=[];
+ function text(x,y,size,value,bold=false){commands.push(`BT /${bold?'F2':'F1'} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${pdfEscape(value)}) Tj ET`);}
+ text(43.2,728,22,`Multiplication Practice: ${currentNumber}`,true);
+ text(43.2,702,11,'Name: ________________________');
+ text(409,702,11,'Date: ________________');
+ text(43.2,676,11,'Solve each multiplication problem.');
+ commands.push('0.65 w');
+ pairs().forEach(([a,b],index)=>{
+  const col=index<13?0:1, row=index<13?index:index-13;
+  const x=43.2+col*279.8, y=628-row*42;
+  commands.push(`BT /F1 22 Tf 1 0 0 1 ${x} ${y} Tm (${a} \\327 ${b} =) Tj ET`);
+  commands.push(`${x+145} ${y-4} m ${x+244} ${y-4} l S`);
+ });
+ const stream=commands.join('\n')+'\n';
+ const objects=[
+ '<< /Type /Catalog /Pages 2 0 R >>',
+ '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+ '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>',
+ '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
+ '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>',
+ `<< /Length ${stream.length} >>\nstream\n${stream}endstream`
+ ];
+ let pdf='%PDF-1.4\n',offsets=[0];
+ objects.forEach((object,i)=>{offsets.push(pdf.length);pdf+=`${i+1} 0 obj\n${object}\nendobj\n`;});
+ const xref=pdf.length;
+ pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`;
+ for(const offset of offsets.slice(1)) pdf+=`${String(offset).padStart(10,'0')} 00000 n \n`;
+ pdf+=`trailer\n<< /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+ return new Blob([pdf],{type:'application/pdf'});
+}
+document.getElementById('settings').addEventListener('submit',event=>{event.preventDefault();generate();});
+document.getElementById('download').addEventListener('click',()=>{
+ if(!ensureCurrent())return;
+ const url=URL.createObjectURL(buildPDF());
+ const link=document.createElement('a');link.href=url;link.download=`multiplication-${currentNumber}-worksheet.pdf`;
+ document.body.append(link);link.click();link.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),60000);
+ statusBox.textContent=`PDF downloaded: 25 problems practicing ${currentNumber}.`;
+});
+document.getElementById('print').addEventListener('click',()=>{if(ensureCurrent())window.print();});
+generate();
+</script>
+</body>
+</html>
