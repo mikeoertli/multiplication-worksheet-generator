@@ -18,14 +18,14 @@
 <h1>A fresh worksheet, every time.</h1>
 <p>Choose a number, shuffle the 25 problems, then download or print one US Letter page.</p>
 <form id="settings" class="toolbar" novalidate>
-<label for="focal">Number to practice<input id="focal" name="focal" type="number" min="0" max="999" step="1" value="5" required aria-describedby="error"></label>
+<label for="focal">Number to practice<input id="focal" name="focal" type="number" min="0" max="12" step="1" value="5" required aria-describedby="error"></label>
 <button type="submit" class="primary" id="generate">Shuffle &amp; Generate</button>
 <button type="button" id="download">Download PDF</button>
 <button type="button" id="print">Print</button>
 </form>
 <div id="error" role="alert"></div>
 <div id="status" role="status" aria-live="polite"></div>
-<p class="hint">Exact photo pattern: multipliers 0–12 appear twice, except 5 once. Each problem keeps its original multiplication order. Works offline after saving this file.</p>
+<p class="hint">Practice multipliers 0–12 in both multiplication orders. The selected number multiplied by itself appears once, for 25 problems total. Works offline after saving this file.</p>
 <p class="hint">Open the saved HTML in Safari, Chrome, Edge, or Firefox to use the buttons.</p>
 <noscript><p>JavaScript must be enabled to generate, download, and print worksheets. Open this file in a browser instead of a file preview.</p></noscript>
 </section>
@@ -38,14 +38,6 @@
 </main>
 <script>
 'use strict';
-// null marks the focal number. These are the exact oriented pairs in the photo,
-// read down its left column, then down its right column.
-const PHOTO_PATTERN = [
- [0,null],[11,null],[null,3],[1,null],[7,null],[null,5],
- [null,2],[10,null],[null,4],[6,null],[8,null],[null,9],[12,null],
- [9,null],[null,10],[null,1],[4,null],[null,0],[null,11],
- [2,null],[null,7],[null,12],[null,8],[3,null],[null,6]
-];
 const focalInput = document.getElementById('focal');
 const errorBox = document.getElementById('error');
 const statusBox = document.getElementById('status');
@@ -55,8 +47,8 @@ let generation = 0;
 function readNumber() {
  const value = focalInput.value.trim();
  const number = Number(value);
- if (!value || !Number.isSafeInteger(number) || number < 0 || number > 999) {
-  errorBox.textContent = 'Enter a whole number from 0 to 999.';
+ if (!value || !Number.isSafeInteger(number) || number < 0 || number > 12) {
+  errorBox.textContent = 'Enter a whole number from 0 to 12.';
   focalInput.setAttribute('aria-invalid','true');
   focalInput.focus();
   return null;
@@ -66,7 +58,7 @@ function readNumber() {
  return number;
 }
 function pairs() {
- return currentOrder.map(index => PHOTO_PATTERN[index].map(value => value === null ? currentNumber : value));
+ return currentOrder;
 }
 function render() {
  document.getElementById('sheet-title').textContent = `Multiplication Practice: ${currentNumber}`;
@@ -87,10 +79,14 @@ function render() {
 }
 function generate() {
  const number=readNumber(); if(number===null) return false;
- const next=PHOTO_PATTERN.map((_,i)=>i);
+ const next=[];
+ for(let multiplier=0;multiplier<=12;multiplier++) {
+  next.push([number,multiplier]);
+  if(multiplier!==number) next.push([multiplier,number]);
+ }
  for(let i=next.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[next[i],next[j]]=[next[j],next[i]];}
  // Even an unlucky shuffle must change the displayed order.
- if(next.every((value,i)=>value===currentOrder[i])) next.push(next.shift());
+ if(next.every(([a,b],i)=>currentOrder[i] && a===currentOrder[i][0] && b===currentOrder[i][1])) next.push(next.shift());
  currentOrder=next; currentNumber=number; generation++;
  render(); statusBox.textContent=`Worksheet ${generation} ready: 25 problems practicing ${number}.`;
  return true;
